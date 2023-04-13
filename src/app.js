@@ -65,7 +65,7 @@ api.post("/participants", (req, res) => {
             else {
                 db.collection("participants").insertOne({
                     name: name,
-                    lasStatus: Date.now()
+                    lastStatus: Date.now()
                 }).then(users => {
                    
                     db.collection("messages").insertOne({
