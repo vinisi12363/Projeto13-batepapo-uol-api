@@ -7,17 +7,10 @@ import dayjs from 'dayjs';
 dayjs.locale('pt-br')
 dotenv.config();
 
-import joi from 'joi'
+import Joi from 'joi'
 
+const nameSchema = Joi.string().min(3).max(30).alphanum().required();
 
-const schema = joi.object({
-    username: joi.string()
-        .alphanum()
-        .min(3)
-        .max(30)
-        .required()
-
-})
 
 
 const api = express()
@@ -40,22 +33,32 @@ api.get("/participants", (req, res) => {
         .catch(err => res.status(500).send(err.message))  // mensagem de erro
 });
 
+async function validateFieldName(name) {
+    try {
+      const nameValidated = await nameSchema.validateAsync(name);
+      return {
+        name: nameValidated,
+      };
+    } catch (error) {
+     console.log(error)
 
+    }
+  }
 
 api.post("/participants", (req, res) => {
-    let userNameValid
-
+    
+ 
     const { name } = req.body
+    if (typeof name != 'string') 
+        return res.status(422).json({ error: "o campo em formato invalido" })
     if (!name)
         return res.status(422).json({ error: "o campo de usuario é obrigatorio" })
 
-    try {
-        userNameValid = schema.validateAsync({ username: name })
-    } catch (err) { }
+    const userNameValid = validateFieldName(name)
 
 
-
-    db.collection("participants").findOne({ name: name })
+    if (userNameValid){
+        db.collection("participants").findOne({ name: name })
         .then(users => {
             if (users)
                 return res.status(409).json({ message: "o Nome de usuário já está sendo usado" })
@@ -64,13 +67,13 @@ api.post("/participants", (req, res) => {
                     name: name,
                     lasStatus: Date.now()
                 }).then(users => {
-                    let time = dayjs().format('HH:mm:ss')
+                   
                     db.collection("messages").insertOne({
                         from: name,
                         to: "Todos",
                         text: "entra na sala...",
                         type: "status",
-                        time: time
+                        time: dayjs().format('HH:mm:ss')
                     }).then(mess => res.sendStatus(201))
                         .catch(err => res.status(500).send(err.message))
 
@@ -81,30 +84,54 @@ api.post("/participants", (req, res) => {
 
         })
         .catch(err => res.status(500).send(err.message))
-
-
+    }else{
+        return res.status(422).json({ error: "campo inválido" })
+    }
+   
 });
 
 
 
 api.get("/messages", (req, res) => {
-    // buscando usuários
-    db.collection("messages").find({ name: "Goku" }).toArray()
-        .then(users => res.send(users))  // array de usuários
-        .catch(err => res.status(500).send(err.message))  // mensagem de erro
+
+    
+    db.collection("messages").find().toArray()
+        .then(data => res.send(data))  
+        .catch(err => res.status(500).send(err.message)) 
 });
 
 
 api.post("/messages", (req, res) => {
-    // inserindo usuário
-    db.collection("messages").insertOne({
-        from: "Felipe",
-        to: "Todos",
-        text: "oi galera",
-        type: "message",
-        time: "20:04:47"
-    }).then(users => res.sendStatus(201))
+    const user = req.headers.user; 
+   
+    console.log("REQ HEADERS", req.headers)
+    const {to , text , type} = req.body
+    console.log("TYPE", type)
+
+    if (!to || !text || !type)
+        return res.status(422).json({ error: "o campo é obrigatorio" })
+
+    if(type !== "message" && type !== "private_message")
+        return res.status(422).json({ error: "campo inválido" })
+   
+    
+   
+    if (user && user !== null){
+        db.collection("participants").findOne({name:user})
+        .then(data =>{
+            db.collection("messages").insertOne({
+                from: user,
+                to: to,
+                text: text,
+                type: type,
+                time: dayjs().format('HH:mm:ss')
+            }).then(users => res.sendStatus(201),  /*res.send(posts)*/)
+                .catch(err => res.status(500).send(err.message))
+        })
         .catch(err => res.status(500).send(err.message))
+
+    }
+   
 });
 
 
