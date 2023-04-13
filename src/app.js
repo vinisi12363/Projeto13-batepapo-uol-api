@@ -107,15 +107,19 @@ api.post("/messages", (req, res) => {
     console.log("REQ HEADERS", req.headers)
     const {to , text , type} = req.body
     console.log("TYPE", type)
-
+     
     if (!to || !text || !type)
         return res.status(422).json({ error: "o campo é obrigatorio" })
 
     if(type !== "message" && type !== "private_message")
         return res.status(422).json({ error: "campo inválido" })
    
-    
+    if (!user)
+        return res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" })
    
+
+
+
     if (user && user !== null){
         db.collection("participants").findOne({name:user})
         .then(data =>{
@@ -128,7 +132,7 @@ api.post("/messages", (req, res) => {
             }).then(users => res.sendStatus(201),  /*res.send(posts)*/)
                 .catch(err => res.status(500).send(err.message))
         })
-        .catch(err => res.status(500).send(err.message))
+        .catch(err => res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" }))
 
     }
    
