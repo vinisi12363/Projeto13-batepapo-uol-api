@@ -149,5 +149,40 @@ api.post("/messages", (req, res) => {
 
 });
 
+api.post ("/status", (req, res)=>{
+    const user = req.headers.user
+    if(!user)
+    return res.status(404).json({error:"erro"}) 
+
+    db.collection("participants").findOne({ name: user })
+    .then(user => {
+        
+        db.collection("participants").update({name:user}, {$set: {lastStatus : Date.now()}})
+        .then(update=> res.sendStatus(200))
+        .catch(err => res.status(500).send(err.message))
+     })
+    .catch(err=> res.status(404).json({error:"error"}))
+
+    setInterval(() => {
+        let tenSecondsAgo = new Date(Date.now() - 10000);
+        console.log("procurando para deletar em :", tenSecondsAgo)
+
+        db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo }})
+        .then(removed=>{
+            db.collection("messages").insertOne({
+                from: user,
+                to: "Todos",
+                text: "sai na sala...",
+                type: "status",
+                time: dayjs().format('HH:mm:ss')
+            }).then(mess => res.sendStatus(201))
+                .catch(err => res.status(500).send(err.message))
+        }) .catch(err => res.status(500).send(err.message))
+       
+        
+      }, 15000);
+
+})
+
 
 api.listen(port, () => console.log(`Servidor iniciado na porta ${port}`))
