@@ -98,7 +98,8 @@ api.get("/messages", (req, res) => {
 
     db.collection("messages").find({ $or: [{ to: 'Todos' }, { type: 'status' } , {type:'message'} , {type:'private_message'}] }).toArray()
         .then(data => {
-
+            if(typeof limit !== 'number')
+            return res.status(422).json({message:"o campo de limite precisa ser um numero"})
             if (limit <= 0 || typeof limit === NaN)
                 return res.status(422).json({ error: "campo limit inválido" })
             if (limit) {
@@ -118,7 +119,7 @@ api.get("/messages", (req, res) => {
 
 
 api.post("/messages", (req, res) => {
-    const user = req.headers.user;
+    const user = req.headers.user
     const { to, text, type } = req.body
 
 
@@ -130,6 +131,9 @@ api.post("/messages", (req, res) => {
 
     if (!user)
         return res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" })
+    db.collection("participants").findOne({name:user})
+    .then()
+    .catch(err => {return res.status(422).json({ error: "usuario nao cadastrado" })})
 
     if (user && user !== null) {
         db.collection("participants").findOne({ name: user })
@@ -143,7 +147,7 @@ api.post("/messages", (req, res) => {
                 }).then(users => res.sendStatus(201),  /*res.send(posts)*/)
                     .catch(err => res.status(500).send(err.message))
             })
-            .catch(err => res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" }))
+            .catch(err => res.status(422).json({ error: "usuario nao cadastrado" }))
 
     }
 
@@ -157,32 +161,36 @@ api.post ("/status", (req, res)=>{
     db.collection("participants").findOne({ name: user })
     .then(user => {
         
-        db.collection("participants").update({name:user}, {$set: {lastStatus : Date.now()}})
+        db.collection("participants").update({name:user}, {$set: {lastStatus : Date.getTime()}})
         .then(update=> res.sendStatus(200))
         .catch(err => res.status(500).send(err.message))
      })
     .catch(err=> res.status(404).json({error:"error"}))
 
-    setInterval(() => {
-        let tenSecondsAgo = new Date(Date.now() - 10000);
-        console.log("procurando para deletar em :", tenSecondsAgo)
-
-        db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo }})
-        .then(removed=>{
-            db.collection("messages").insertOne({
-                from: user,
-                to: "Todos",
-                text: "sai na sala...",
-                type: "status",
-                time: dayjs().format('HH:mm:ss')
-            }).then(mess => res.sendStatus(201))
-                .catch(err => res.status(500).send(err.message))
-        }) .catch(err => res.status(500).send(err.message))
-       
-        
-      }, 15000);
-
+    
+    setInterval(deleteUsers(user), 15000);
 })
 
 
 api.listen(port, () => console.log(`Servidor iniciado na porta ${port}`))
+
+
+async function deleteUsers (user){
+    let tenSecondsAgo = Date.now() - 10000
+    console.log("procurando para deletar em :", tenSecondsAgo)
+    try{
+        db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
+        db.collection("messages").insertOne({
+            from: user,
+            to: "Todos",
+            text: "sai na sala...",
+            type: "status",
+            time: dayjs().format('HH:mm:ss')
+        }).then(mess => res.sendStatus(201))
+          .catch(err => res.status(500).send(err.message))
+    }
+    catch(error){
+        console.log("ERROR",error)
+    }
+
+}
