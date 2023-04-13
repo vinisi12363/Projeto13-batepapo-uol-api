@@ -35,21 +35,21 @@ api.get("/participants", (req, res) => {
 
 async function validateFieldName(name) {
     try {
-      const nameValidated = await nameSchema.validateAsync(name);
-      return {
-        name: nameValidated,
-      };
+        const nameValidated = await nameSchema.validateAsync(name);
+        return {
+            name: nameValidated,
+        };
     } catch (error) {
-     console.log(error)
+        console.log(error)
 
     }
-  }
+}
 
 api.post("/participants", (req, res) => {
-    
- 
+
+
     const { name } = req.body
-    if (typeof name != 'string') 
+    if (typeof name != 'string')
         return res.status(422).json({ error: "o campo em formato invalido" })
     if (!name)
         return res.status(422).json({ error: "o campo de usuario é obrigatorio" })
@@ -57,85 +57,96 @@ api.post("/participants", (req, res) => {
     const userNameValid = validateFieldName(name)
 
 
-    if (userNameValid){
+    if (userNameValid) {
         db.collection("participants").findOne({ name: name })
-        .then(users => {
-            if (users)
-                return res.status(409).json({ message: "o Nome de usuário já está sendo usado" })
-            else {
-                db.collection("participants").insertOne({
-                    name: name,
-                    lastStatus: Date.now()
-                }).then(users => {
-                   
-                    db.collection("messages").insertOne({
-                        from: name,
-                        to: "Todos",
-                        text: "entra na sala...",
-                        type: "status",
-                        time: dayjs().format('HH:mm:ss')
-                    }).then(mess => res.sendStatus(201))
+            .then(users => {
+                if (users)
+                    return res.status(409).json({ message: "o Nome de usuário já está sendo usado" })
+                else {
+                    db.collection("participants").insertOne({
+                        name: name,
+                        lastStatus: Date.now()
+                    }).then(users => {
+
+                        db.collection("messages").insertOne({
+                            from: name,
+                            to: "Todos",
+                            text: "entra na sala...",
+                            type: "status",
+                            time: dayjs().format('HH:mm:ss')
+                        }).then(mess => res.sendStatus(201))
+                            .catch(err => res.status(500).send(err.message))
+
+
+                    })
                         .catch(err => res.status(500).send(err.message))
+                }
 
-
-                })
-                    .catch(err => res.status(500).send(err.message))
-            }
-
-        })
-        .catch(err => res.status(500).send(err.message))
-    }else{
+            })
+            .catch(err => res.status(500).send(err.message))
+    } else {
         return res.status(422).json({ error: "campo inválido" })
     }
-   
+
 });
 
 
 
 api.get("/messages", (req, res) => {
+    const user = req.headers.user;
+    const limit = parseInt(req.query.limit);
+
+    db.collection("messages").find({ $or: [{ to: 'Todos' }, { type: 'status' } , {type:'message'} , {type:'private_message'}] }).toArray()
+        .then(data => {
+
+            if (limit <= 0 || typeof limit === NaN)
+                return res.status(422).json({ error: "campo limit inválido" })
+            if (limit) {
+                db.collection("messages").find({$or:[{ to: user }, { from: user } , {type:'message'}]}).limit(limit).toArray()
+                    .then(messages => res.send(messages))
+                    .catch(err => res.status(500).send(err.message))
+
+            } else {
+                res.send(data)
+            }
+        })
+
+        .catch(err => res.status(500).send(err.message))
 
     
-    db.collection("messages").find().toArray()
-        .then(data => res.send(data))  
-        .catch(err => res.status(500).send(err.message)) 
 });
 
 
 api.post("/messages", (req, res) => {
-    const user = req.headers.user; 
-   
-    console.log("REQ HEADERS", req.headers)
-    const {to , text , type} = req.body
-    console.log("TYPE", type)
-     
+    const user = req.headers.user;
+    const { to, text, type } = req.body
+
+
     if (!to || !text || !type)
         return res.status(422).json({ error: "o campo é obrigatorio" })
 
-    if(type !== "message" && type !== "private_message")
+    if (type !== "message" && type !== "private_message")
         return res.status(422).json({ error: "campo inválido" })
-   
+
     if (!user)
         return res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" })
-   
 
-
-
-    if (user && user !== null){
-        db.collection("participants").findOne({name:user})
-        .then(data =>{
-            db.collection("messages").insertOne({
-                from: user,
-                to: to,
-                text: text,
-                type: type,
-                time: dayjs().format('HH:mm:ss')
-            }).then(users => res.sendStatus(201),  /*res.send(posts)*/)
-                .catch(err => res.status(500).send(err.message))
-        })
-        .catch(err => res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" }))
+    if (user && user !== null) {
+        db.collection("participants").findOne({ name: user })
+            .then(data => {
+                db.collection("messages").insertOne({
+                    from: user,
+                    to: to,
+                    text: text,
+                    type: type,
+                    time: dayjs().format('HH:mm:ss')
+                }).then(users => res.sendStatus(201),  /*res.send(posts)*/)
+                    .catch(err => res.status(500).send(err.message))
+            })
+            .catch(err => res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" }))
 
     }
-   
+
 });
 
 
