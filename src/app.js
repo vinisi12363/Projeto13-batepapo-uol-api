@@ -99,22 +99,21 @@ api.get("/messages", async (req, res) => {
     console.log('USER',req.headers)
     const limit = parseInt(req.query.limit);
     
-    if(!user) return res.status(422).send("campo de usuario invalido")
+    if(!user) return res.status(422).send("nenhum usuario logado atualmente")
 
     if(typeof user !== "string" ) return res.status(422).send("formato de user invalido") 
+   
+    const validation = limitSchema.validate(limit)
+    if (validation.error) {
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
 
 
     try {  
                     
 
-        const validation = limitSchema.validate(limit)
-        if (validation.error) {
-            const errors = validation.error.details.map((detail) => detail.message);
-            return res.status(422).send(errors);
-        }
-
-
-       const messages = await db.collection("messages").find({ $or: [{ to: 'Todos'},{ to: user }, { from: user } , {type:'private_message'}] }).limit(limit).toArray()
+       const messages = await db.collection("messages").find({ $or: [{ to: 'Todos'}, { to: user }, { from: user }] }).limit(limit).toArray()
       
        if (limit <= 0)
        return res.status(422).json({ error: "campo limit tem que ser maior que zero" })
