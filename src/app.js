@@ -3,14 +3,17 @@ import Cors from 'cors'
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from 'dayjs';
-
+import joi from 'joi';
 dayjs.locale('pt-br')
 dotenv.config();
 
-import Joi from 'joi'
 
-const nameSchema = Joi.string().min(3).max(30).alphanum().required();
 
+const nameSchema = joi.object({
+    name:joi.string().required().alphanum().min(3).max(30)
+})
+
+const limitSchema = joi.number().required()
 
 
 const api = express()
@@ -19,103 +22,101 @@ api.use(express.json())
 const port = 5000
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
-let db;
-
-
-mongoClient.connect()
-    .then(() => db = mongoClient.db())
-    .catch((err) => console.log(err.message))
-
-api.get("/participants", (req, res) => {
-    // buscando usuários
-    db.collection("participants").find().toArray()
-        .then(users => res.send(users))  // array de usuários
-        .catch(err => res.status(500).send(err.message))  // mensagem de erro
-});
-
-async function validateFieldName(name) {
-    try {
-        const nameValidated = await nameSchema.validateAsync(name);
-        return {
-            name: nameValidated,
-        };
-    } catch (error) {
-        console.log(error)
-
-    }
+let db
+try{
+    mongoClient.connect()
+     db = mongoClient.db()
+}catch(err){
+    (err) => console.log(err.message)
 }
 
-api.post("/participants", (req, res) => {
 
+api.get("/participants", async (req, res) => {
+    
+    try{
+        const users = await db.collection("participants").find().toArray()
+        res.send(users) 
+    }catch(err){
+        res.status(500).send(err.message)
+    }
+  
+});
+
+api.post("/participants",  async (req, res) => {
 
     const { name } = req.body
-    if (typeof name != 'string')
-        return res.status(422).json({ error: "o campo em formato invalido" })
+
     if (!name)
         return res.status(422).json({ error: "o campo de usuario é obrigatorio" })
 
-    const userNameValid = validateFieldName(name)
-
-
-    if (userNameValid) {
-        db.collection("participants").findOne({ name: name })
-            .then(users => {
-                if (users)
-                    return res.status(409).json({ message: "o Nome de usuário já está sendo usado" })
-                else {
-                    db.collection("participants").insertOne({
-                        name: name,
-                        lastStatus: Date.now()
-                    }).then(users => {
-
-                        db.collection("messages").insertOne({
-                            from: name,
-                            to: "Todos",
-                            text: "entra na sala...",
-                            type: "status",
-                            time: dayjs().format('HH:mm:ss')
-                        }).then(mess => res.sendStatus(201))
-                            .catch(err => res.status(500).send(err.message))
-
-
-                    })
-                        .catch(err => res.status(500).send(err.message))
-                }
-
-            })
-            .catch(err => res.status(500).send(err.message))
-    } else {
-        return res.status(422).json({ error: "campo inválido" })
+    const validation = nameSchema.validate({name}, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
     }
 
+    try {
+        const userAlreadyExist =  await db.collection("participants").findOne({ name: name })
+            
+                    if (userAlreadyExist)
+                        return res.status(409).json({ message: "o Nome de usuário já está sendo usado" })
+                    
+                    await  db.collection("participants").insertOne({
+                            name: name,
+                            lastStatus: Date.now()
+                    })
+                    
+                    await db.collection("messages").insertOne({
+                                from: name,
+                                to: "Todos",
+                                text: "entra na sala...",
+                                type: "status",
+                                time: dayjs().format('HH:mm:ss')
+                    })
+
+                    res.sendStatus(201).json({message:"created"})
+        
+        } catch (err) {
+            return res.status(500).json({err})
+        }
+
 });
 
 
+api.get("/messages", async (req, res) => {
 
-api.get("/messages", (req, res) => {
-    const user = req.headers.user;
+    const {user} = req.headers;
     const limit = parseInt(req.query.limit);
-
-    db.collection("messages").find({ $or: [{ to: 'Todos' }, { type: 'status' } , {type:'message'} , {type:'private_message'}] }).toArray()
-        .then(data => {
-            if(typeof limit !== 'number')
-            return res.status(422).json({message:"o campo de limite precisa ser um numero"})
-            if (limit <= 0 || typeof limit === NaN)
-                return res.status(422).json({ error: "campo limit inválido" })
-            if (limit) {
-                db.collection("messages").find({$or:[{ to: user }, { from: user } , {type:'message'}]}).limit(limit).toArray()
-                    .then(messages => res.send(messages))
-                    .catch(err => res.status(500).send(err.message))
-
-            } else {
-                res.send(data)
-            }
-        })
-
-        .catch(err => res.status(500).send(err.message))
-
     
-});
+    const validateUser = nameSchema.validate({user})
+    if (validateUser.error){
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors); 
+    }
+
+    const validation = limitSchema.validate(limit)
+    if (validation.error) {
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
+
+    try {
+       const commonMessages = await db.collection("messages").find({ $or: [{ to: 'Todos' }, { type: 'status' } , {type:'message'}] }).toArray()
+        
+       if (limit <= 0)
+       return res.status(422).json({ error: "campo limit tem que ser maior que zero" })
+ 
+
+       const privateMessages = await db.collection("messages").find({$or:[{ to: user }, { from: user } , {type:'private_message'}]}).limit(limit).toArray()
+       
+       res.send(privateMessages)
+       res.send(commonMessages)
+
+    }catch(err){
+      res.status(500).send(err.message)
+    }
+
+})
 
 
 api.post("/messages", (req, res) => {
@@ -153,44 +154,47 @@ api.post("/messages", (req, res) => {
 
 });
 
-api.post ("/status", (req, res)=>{
-    const user = req.headers.user
-    if(!user)
-    return res.status(404).json({error:"erro"}) 
-
-    db.collection("participants").findOne({ name: user })
-    .then(user => {
+api.post ("/status", async (req, res)=>{
+        const user = req.headers.user
+        const d = new Date();
+        let time = d.getTime();
+            console.log ("date now",Date.now(), " now -10 ", Date.now()- 10000, " time " , time )
         
-        db.collection("participants").update({name:user}, {$set: {lastStatus : Date.getTime()}})
-        .then(update=> res.sendStatus(200))
-        .catch(err => res.status(500).send(err.message))
-     })
-    .catch(err=> res.status(404).json({error:"error"}))
-
+        
+        if(!user)
+        return res.status(404).json({error:"erro nao existe usuario ativo"}) 
     
-    setInterval(deleteUsers(user), 15000);
-})
+        try{
+            db.collection("participants").update({name:user}, {$set:{lastStatus : Date.now()}})
+            res.status(200)
+        }
+        catch(err){
+            res.status(500).send(err.message)
+        }
+            
+        
+ })
+    
+/**
+        setInterval(()=>{
+            try{
+                db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
+                db.collection("messages").insertOne({
+                    from: user,
+                    to: "Todos",
+                    text: "sai na sala...",
+                    type: "status",
+                    time: dayjs().format('HH:mm:ss')
+                }).then(mess => res.status(201))
+                  .catch(err => res.status(500).send(err.message))
+            }
+            catch(error){
+                console.log("ERROR",error)
+            }
+        },15000)
+       
+     */
 
 
 api.listen(port, () => console.log(`Servidor iniciado na porta ${port}`))
 
-
-async function deleteUsers (user){
-    let tenSecondsAgo = Date.now() - 10000
-    console.log("procurando para deletar em :", tenSecondsAgo)
-    try{
-        db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
-        db.collection("messages").insertOne({
-            from: user,
-            to: "Todos",
-            text: "sai na sala...",
-            type: "status",
-            time: dayjs().format('HH:mm:ss')
-        }).then(mess => res.sendStatus(201))
-          .catch(err => res.status(500).send(err.message))
-    }
-    catch(error){
-        console.log("ERROR",error)
-    }
-
-}
