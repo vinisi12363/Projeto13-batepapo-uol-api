@@ -13,7 +13,7 @@ const nameSchema = joi.object({
     name:joi.string().required().alphanum().min(3).max(30)
 })
 
-const limitSchema = joi.number().required()
+const limitSchema = joi.number()
 
 
 const api = express()
@@ -45,17 +45,20 @@ api.get("/participants", async (req, res) => {
 api.post("/participants",  async (req, res) => {
 
     const { name } = req.body
+    console.log("USER:", name)
 
     if (!name)
         return res.status(422).json({ error: "o campo de usuario é obrigatorio" })
 
-    const validation = nameSchema.validate({name}, { abortEarly: false });
-    if (validation.error) {
-        const errors = validation.error.details.map((detail) => detail.message);
-        return res.status(422).send(errors);
-    }
+   
 
     try {
+        const validation = nameSchema.validate({name}, { abortEarly: false });
+        if (validation.error) {
+            const errors = validation.error.details.map((detail) => detail.message);
+            return res.status(422).send(errors);
+        }
+
         const userAlreadyExist =  await db.collection("participants").findOne({ name: name })
             
                     if (userAlreadyExist)
@@ -77,7 +80,7 @@ api.post("/participants",  async (req, res) => {
                     res.sendStatus(201).json({message:"created"})
         
         } catch (err) {
-            return res.status(500).json({err})
+            return res.status(500)
         }
 
 });
@@ -85,42 +88,43 @@ api.post("/participants",  async (req, res) => {
 
 api.get("/messages", async (req, res) => {
 
-    const {user} = req.headers;
+    const user = req.headers.user;
+    console.log('USER',req.headers)
     const limit = parseInt(req.query.limit);
     
-    const validateUser = nameSchema.validate({user})
-    if (validateUser.error){
-        const errors = validation.error.details.map((detail) => detail.message);
-        return res.status(422).send(errors); 
-    }
+    if(!user) return res.status(422).send("campo de usuario invalido")
 
-    const validation = limitSchema.validate(limit)
-    if (validation.error) {
-        const errors = validation.error.details.map((detail) => detail.message);
-        return res.status(422).send(errors);
-    }
+    if(typeof user !== "string" ) return res.status(422).send("formato de user invalido") 
 
-    try {
-       const commonMessages = await db.collection("messages").find({ $or: [{ to: 'Todos' }, { type: 'status' } , {type:'message'}] }).toArray()
-        
+
+    try {  
+                    
+
+        const validation = limitSchema.validate(limit)
+        if (validation.error) {
+            const errors = validation.error.details.map((detail) => detail.message);
+            return res.status(422).send(errors);
+        }
+
+
+       const messages = await db.collection("messages").find({ $or: [{ to: 'Todos'},{ to: user }, { from: user } , {type:'private_message'}] }).limit(limit).toArray()
+      
        if (limit <= 0)
        return res.status(422).json({ error: "campo limit tem que ser maior que zero" })
  
 
-       const privateMessages = await db.collection("messages").find({$or:[{ to: user }, { from: user } , {type:'private_message'}]}).limit(limit).toArray()
-       
-       res.send(privateMessages)
-       res.send(commonMessages)
+       res.send(messages)
 
     }catch(err){
-      res.status(500).send(err.message)
+        res.status(500).send(err.message)
     }
-
+  
 })
 
 
 api.post("/messages", (req, res) => {
-    const user = req.headers.user
+    const { user } = req.headers
+    console.log('req headers: ', req.headers)
     const { to, text, type } = req.body
 
 
@@ -153,7 +157,7 @@ api.post("/messages", (req, res) => {
     }
 
 });
-
+/*
 api.post ("/status", async (req, res)=>{
         const user = req.headers.user
         const d = new Date();
@@ -174,7 +178,7 @@ api.post ("/status", async (req, res)=>{
             
         
  })
-    
+   */ 
 /**
         setInterval(()=>{
             try{
