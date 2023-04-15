@@ -15,6 +15,12 @@ const nameSchema = joi.object({
 
 const limitSchema = joi.number()
 
+const messageSchema = joi.object({
+    to:joi.string().required(),
+    from:joi.string().required(),
+    type:joi.string().required()
+})
+
 
 const api = express()
 api.use(Cors())
@@ -122,40 +128,38 @@ api.get("/messages", async (req, res) => {
 })
 
 
-api.post("/messages", (req, res) => {
+api.post("/messages", async (req, res) => {
     const { user } = req.headers
     console.log('req headers: ', req.headers)
     const { to, text, type } = req.body
 
-
-    if (!to || !text || !type)
-        return res.status(422).json({ error: "o campo é obrigatorio" })
+    const validateBody = messageSchema.validate({to, text, type},{ abortEarly: false })
+    if (validateBody.error){
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
 
     if (type !== "message" && type !== "private_message")
         return res.status(422).json({ error: "campo inválido" })
 
-    if (!user)
-        return res.status(422).json({ error: "o campo de nome de usuario é obrigatorio" })
-    db.collection("participants").findOne({name:user})
-    .then()
-    .catch(err => {return res.status(422).json({ error: "usuario nao cadastrado" })})
-
-    if (user && user !== null) {
-        db.collection("participants").findOne({ name: user })
-            .then(data => {
-                db.collection("messages").insertOne({
-                    from: user,
-                    to: to,
-                    text: text,
-                    type: type,
-                    time: dayjs().format('HH:mm:ss')
-                }).then(users => res.sendStatus(201),  /*res.send(posts)*/)
-                    .catch(err => res.status(500).send(err.message))
-            })
-            .catch(err => res.status(422).json({ error: "usuario nao cadastrado" }))
-
+    const validateUser= nameSchema.validate({user})
+    if(validateUser.error){
+        const errors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
     }
 
+    try{
+        db.collection("messages").insertOne({
+            from: user,
+            to: to,
+            text: text,
+            type: type,
+            time: dayjs().format('HH:mm:ss')
+        })
+        res.sendStatus(201)
+
+    }catch(err){  res.status(500).send(err.message)}
+   
 });
 /*
 api.post ("/status", async (req, res)=>{
