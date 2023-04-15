@@ -12,12 +12,13 @@ dotenv.config();
 const nameSchema = joi.object({
     name:joi.string().required().alphanum().min(3).max(30)
 })
+const userSchema = joi.string()
 
 const limitSchema = joi.number()
 
 const messageSchema = joi.object({
     to:joi.string().required(),
-    from:joi.string().required(),
+    text:joi.string().required(),
     type:joi.string().required()
 })
 
@@ -135,16 +136,16 @@ api.post("/messages", async (req, res) => {
 
     const validateBody = messageSchema.validate({to, text, type},{ abortEarly: false })
     if (validateBody.error){
-        const errors = validation.error.details.map((detail) => detail.message);
+        const errors = validateBody.error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
     }
 
     if (type !== "message" && type !== "private_message")
         return res.status(422).json({ error: "campo inválido" })
 
-    const validateUser= nameSchema.validate({user})
+    const validateUser= userSchema.validate(user)
     if(validateUser.error){
-        const errors = validation.error.details.map((detail) => detail.message);
+        const errors = validateUser.error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
     }
 
