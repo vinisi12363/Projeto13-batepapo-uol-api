@@ -208,11 +208,11 @@ api.post ("/status", async (req, res)=>{
             let tenSecondsAgo  = Date.now() - 10000;
             
             try{
-               await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
-                .then((user)=>{    
+               const dataUser = await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
+               
             
                     
-                    if (user !== []){
+                    if (dataUser !== [] && dataUser !== null){
                         db.collection("messages").insertOne({
                             from: user.name,
                             to: "Todos",
@@ -220,15 +220,9 @@ api.post ("/status", async (req, res)=>{
                             type: "status",
                             time: dayjs().format('HH:mm:ss')
                             
-                        }).catch((err)=> console.log(err))
+                        })
                     }
                 
-
-                })
-                .catch((err)=>{
-                     console.log(err.message)
-                })
-
 
                 await db.collection("participants").deleteMany({ lastStatus: { $lte: tenSecondsAgo}})
 
