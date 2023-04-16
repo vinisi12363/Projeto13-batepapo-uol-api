@@ -210,9 +210,9 @@ api.post ("/status", async (req, res)=>{
             try{
                const dataUser = await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
                
-            
+                console.log ("DATA USER ",dataUser)
                     
-                    if (dataUser !== [] && dataUser !== null){
+                    if (dataUser){
                         db.collection("messages").insertOne({
                             from: user.name,
                             to: "Todos",
