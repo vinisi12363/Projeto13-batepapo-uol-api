@@ -213,7 +213,7 @@ api.post ("/status", async (req, res)=>{
                 console.log ("DATA USER ",dataUser)
                     
                     if (dataUser && dataUser !== []){
-                        dataUser.map((user)=>{
+                        dataUser.forEach((user)=>{
                             db.collection("messages").insertOne({
                                 from: user.name,
                                 to: "Todos",
