@@ -4,9 +4,9 @@ import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from 'dayjs';
 import joi from 'joi';
+import { stripHtml} from "string-strip-html";
 dayjs.locale('pt-br')
 dotenv.config();
-
 
 
 const nameSchema = joi.object({
@@ -52,7 +52,7 @@ api.get("/participants", async (req, res) => {
 api.post("/participants",  async (req, res) => {
 
     const { name } = req.body
-
+    
 
     if (!name)
         return res.status(422).json({ error: "o campo de usuario é obrigatorio" })
