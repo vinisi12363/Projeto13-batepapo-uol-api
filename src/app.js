@@ -214,7 +214,7 @@ api.post ("/status", async (req, res)=>{
                     
                     if (dataUser){
                         db.collection("messages").insertOne({
-                            from: user.name,
+                            from: dataUser.name,
                             to: "Todos",
                             text: "sai na sala...",
                             type: "status",
