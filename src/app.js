@@ -174,7 +174,13 @@ api.post ("/status", async (req, res)=>{
             return res.status(422).send(errors);
         }
       
+
         try{
+
+           const searchUser = db.collection("participants").findOne({name:user})
+           if (!searchUser)
+           return res.status(404)
+           
            await db.collection("participants").updateOne({name:user}, {$set:{lastStatus : d.getTime()}})
             res.status(200).send("tempo atualizado")
         }
@@ -209,8 +215,6 @@ api.post ("/status", async (req, res)=>{
                 .catch((err)=>{
                      console.log(err.message)
                 })
-
-
 
 
                 await db.collection("participants").deleteMany({ lastStatus: { $lte: tenSecondsAgo}})
