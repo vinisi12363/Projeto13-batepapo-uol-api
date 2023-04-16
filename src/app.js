@@ -217,7 +217,7 @@ api.post ("/status", async (req, res)=>{
                             db.collection("messages").insertOne({
                                 from: user.name,
                                 to: "Todos",
-                                text: "sai na sala...",
+                                text: "sai da sala...",
                                 type: "status",
                                 time: dayjs().format('HH:mm:ss')
                                 
