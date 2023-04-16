@@ -212,15 +212,19 @@ api.post ("/status", async (req, res)=>{
                
                 console.log ("DATA USER ",dataUser)
                     
-                    if (dataUser){
-                        db.collection("messages").insertOne({
-                            from: dataUser.name,
-                            to: "Todos",
-                            text: "sai na sala...",
-                            type: "status",
-                            time: dayjs().format('HH:mm:ss')
-                            
+                    if (dataUser && dataUser !== []){
+                        dataUser.map((user)=>{
+                            db.collection("messages").insertOne({
+                                from: user.name,
+                                to: "Todos",
+                                text: "sai na sala...",
+                                type: "status",
+                                time: dayjs().format('HH:mm:ss')
+                                
+                            })
+
                         })
+                      
                     }
                 
 
