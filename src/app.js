@@ -149,23 +149,27 @@ api.post("/messages", async (req, res) => {
         const errors = validateUser.error.details.map((detail) => detail.message);
         return res.status(422).send(errors);
     }
+    if (typeof user === 'string') {
+        try{
 
-    try{
-
-        const searchUser = await db.collection("participants").findOne({name:user})
-        if (!searchUser)
-        return res.status(422)
-
-         await db.collection("messages").insertOne({
-            from: user,
-            to: to,
-            text: text,
-            type: type,
-            time: dayjs().format('HH:mm:ss')
-        })
-        res.sendStatus(201)
-
-    }catch(err){  res.status(500).send(err.message)}
+            const searchUser = await db.collection("participants").findOne({name:user})
+            if (!searchUser)
+            return res.status(422)
+    
+             await db.collection("messages").insertOne({
+                from: user,
+                to: to,
+                text: text,
+                type: type,
+                time: dayjs().format('HH:mm:ss')
+            })
+            res.sendStatus(201)
+    
+        }catch(err){  res.status(500).send(err.message)}
+    }else{
+        res.status(422).json({message:"formato invalido"})
+    }
+    
    
 });
 
@@ -184,9 +188,10 @@ api.post ("/status", async (req, res)=>{
 
         try{
 
-           const searchUser = db.collection("participants").findOne({name:user})
-           if (!searchUser)
-           return res.status(404)
+           const searchUser = await db.collection("participants").findOne({name:user})
+           console.log("usuario do sarch do status", searchUser)
+           if (searchUser == null || !searchUser  )
+           return res.status(404).json({error:"erro"})
 
            await db.collection("participants").updateOne({name:user}, {$set:{lastStatus : d.getTime()}})
             res.status(200).send("tempo atualizado")
@@ -197,13 +202,13 @@ api.post ("/status", async (req, res)=>{
         
  })
    
-
+/*
         setInterval(async () =>{
             let tenSecondsAgo  = Date.now() - 10000;
             console.log("DATE NOW: ", Date.now(), "DEZ SEGUNDOS ATRAS", tenSecondsAgo)
 
             try{
-               /* await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
+               await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
                 .then((user)=>{    
                     console.log("USER DENTRO DO INTERVAL",user)
                     if (user !== null){
@@ -221,7 +226,7 @@ api.post ("/status", async (req, res)=>{
                 })
                 .catch((err)=>{
                      console.log(err.message)
-                })*/
+                })
 
 
                 await db.collection("participants").deleteMany({ lastStatus: { $lte: tenSecondsAgo}})
@@ -231,7 +236,7 @@ api.post ("/status", async (req, res)=>{
 
             
         },15000)
-       
+*/       
      
 
 
