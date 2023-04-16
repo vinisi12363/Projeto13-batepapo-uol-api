@@ -52,7 +52,7 @@ api.get("/participants", async (req, res) => {
 api.post("/participants",  async (req, res) => {
 
     const { name } = req.body
-    console.log("USER:", name)
+
 
     if (!name)
         return res.status(422).json({ error: "o campo de usuario é obrigatorio" })
@@ -96,7 +96,6 @@ api.post("/participants",  async (req, res) => {
 api.get("/messages", async (req, res) => {
     
     const user = req.headers.user;
-    console.log('USER',req.headers)
     const limit = parseInt(req.query.limit);
     
     if(!user) return res.status(422).send("nenhum usuario logado atualmente")
@@ -130,7 +129,7 @@ api.get("/messages", async (req, res) => {
 
 api.post("/messages", async (req, res) => {
     const { user } = req.headers
-    console.log('req headers: ', req.headers)
+
     const { to, text, type } = req.body
 
     if(!user || user === null) return res.status(422).json({message:"user invalido"})
@@ -189,7 +188,7 @@ api.post ("/status", async (req, res)=>{
         try{
 
            const searchUser = await db.collection("participants").findOne({name:user})
-           console.log("usuario do sarch do status", searchUser)
+       
            if (searchUser == null || !searchUser  )
            return res.status(404).json({error:"erro"})
 
@@ -202,18 +201,20 @@ api.post ("/status", async (req, res)=>{
         
  })
    
-/*
-        setInterval(async () =>{
-            let tenSecondsAgo  = Date.now() - 10000;
-            console.log("DATE NOW: ", Date.now(), "DEZ SEGUNDOS ATRAS", tenSecondsAgo)
 
+        setInterval(async () =>{
+
+
+            let tenSecondsAgo  = Date.now() - 10000;
+            
             try{
                await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
                 .then((user)=>{    
-                    console.log("USER DENTRO DO INTERVAL",user)
-                    if (user !== null){
+            
+                    
+                    if (user !== []){
                         db.collection("messages").insertOne({
-                            from: user,
+                            from: user.name,
                             to: "Todos",
                             text: "sai na sala...",
                             type: "status",
@@ -236,7 +237,7 @@ api.post ("/status", async (req, res)=>{
 
             
         },15000)
-*/       
+      
      
 
 
