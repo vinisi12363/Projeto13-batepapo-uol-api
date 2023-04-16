@@ -164,7 +164,6 @@ api.post("/messages", async (req, res) => {
 
 api.post ("/status", async (req, res)=>{
         const user = req.headers.user
-    
         const d = new Date();
           
         if(!user || user===null)
@@ -185,25 +184,30 @@ api.post ("/status", async (req, res)=>{
         
  })
    
-/**
-        setInterval(()=>{
+
+        setInterval(async ()=>{
+            let tenSecondsAgo  = Date.now() - 10000;
+            console.log("DATE NOW: ", Date.now(), "DEZ SEGUNDOS ATRAS", tenSecondsAgo)
+
             try{
-                db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
-                db.collection("messages").insertOne({
+             await  db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
+            
+
+               /*await  db.collection("messages").insertOne({
                     from: user,
                     to: "Todos",
                     text: "sai na sala...",
                     type: "status",
                     time: dayjs().format('HH:mm:ss')
-                }).then(mess => res.status(201))
-                  .catch(err => res.status(500).send(err.message))
+                }) */
+              
             }
-            catch(error){
-                console.log("ERROR",error)
+            catch(err){
+              console.log(err.message)
             }
-        },15000)
+        },10000)
        
-     */
+     
 
 
 api.listen(port, () => console.log(`Servidor iniciado na porta ${port}`))
