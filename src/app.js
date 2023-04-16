@@ -1,6 +1,6 @@
 import express from 'express'
 import Cors from 'cors'
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from 'dayjs';
 import joi from 'joi';
@@ -200,8 +200,79 @@ api.post ("/status", async (req, res)=>{
         }         
         
  })
-   
 
+ api.delete("/messages/:id", async (req, res)=>{
+    const {user} = req.headers
+    const {id} =req.params
+    console.log("user", user, " ID ", id)
+    if(!user || user===null)
+    return res.status(404)
+    const validateUser= userSchema.validate(user)
+    if(validateUser.error){
+        const errors = validateUser.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
+
+    try{
+        const findId = await db.collection("messages").findOne({$and:[{_id: new ObjectId(id)}, {from:user}]})
+        console.log("FIND ID", findId) 
+        if(findId.from !== user)
+            return res.status(401)
+        
+        if(findId){
+            await db.collection("messages").deleteOne({_id: new ObjectId(id)})
+            res.status(200).send("mensagem deletada com sucesso")
+        }else{
+            return res.status(404)
+        }
+
+    }catch(err){
+        res.status(500).json({error:err})
+    }
+
+
+ })
+
+ api.put ("/messages/:id", async (req, res)=>{
+    const {user} = req.headers
+    const {to , text, type } =req.body
+    const {id} = req.params
+    
+    if(!user || user===null)
+    return res.status(404)
+    const validateUser= userSchema.validate(user)
+    if(validateUser.error){
+        const errors = validateUser.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
+    const validateBody = messageSchema.validate({to, text, type},{ abortEarly: false })
+    if (validateBody.error){
+        const errors = validateBody.error.details.map((detail) => detail.message);
+        return res.status(422).send(errors);
+    }
+
+    if (type !== "message" && type !== "private_message")
+        return res.status(422).json({ error: "campo inválido" })
+
+    try{
+
+        const findId = await db.collection("messages").findOne({$and:[{_id: new ObjectId(id)}, {from:user}]})
+        console.log("FIND ID", findId) 
+       
+        if(findId.from !== user)
+            return res.status(401)
+        
+        if(findId){
+            await db.collection("messages").updateOne({ _id:new ObjectId(id)}, {$set:{to:to , text: text, type: type, time:dayjs().format('HH:mm:ss')}})
+            res.status(200).send("mensagem alterada com sucesso")
+        }else{
+            return res.status(404)
+        }
+    }catch(err){res.status(500).send(err.message)}
+
+
+ })
+ /*
         setInterval(async () =>{
 
 
@@ -237,7 +308,7 @@ api.post ("/status", async (req, res)=>{
         },15000)
       
      
-
+*/
 
 api.listen(port, () => console.log(`Servidor iniciado na porta ${port}`))
 
