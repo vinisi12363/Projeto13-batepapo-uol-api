@@ -167,7 +167,7 @@ api.post ("/status", async (req, res)=>{
     
         const d = new Date();
           
-        (!user || user===null)
+        if(!user || user===null)
             return res.status(404)
         const validateUser= userSchema.validate(user)
         if(validateUser.error){
