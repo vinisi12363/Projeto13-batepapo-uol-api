@@ -133,6 +133,8 @@ api.post("/messages", async (req, res) => {
     console.log('req headers: ', req.headers)
     const { to, text, type } = req.body
 
+    if(!user) return res.status(422).json({message:"user invalido"})
+
     const validateBody = messageSchema.validate({to, text, type},{ abortEarly: false })
     if (validateBody.error){
         const errors = validateBody.error.details.map((detail) => detail.message);
@@ -149,7 +151,12 @@ api.post("/messages", async (req, res) => {
     }
 
     try{
-        db.collection("messages").insertOne({
+
+        const searchUser = await db.collection("participants").findOne({name:user})
+        if (!searchUser)
+        return res.status(422)
+
+         await db.collection("messages").insertOne({
             from: user,
             to: to,
             text: text,
@@ -180,7 +187,7 @@ api.post ("/status", async (req, res)=>{
            const searchUser = db.collection("participants").findOne({name:user})
            if (!searchUser)
            return res.status(404)
-           
+
            await db.collection("participants").updateOne({name:user}, {$set:{lastStatus : d.getTime()}})
             res.status(200).send("tempo atualizado")
         }
