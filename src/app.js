@@ -185,27 +185,36 @@ api.post ("/status", async (req, res)=>{
  })
    
 
-        setInterval(async ()=>{
+        setInterval(async () =>{
             let tenSecondsAgo  = Date.now() - 10000;
             console.log("DATE NOW: ", Date.now(), "DEZ SEGUNDOS ATRAS", tenSecondsAgo)
 
             try{
-             await  db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
-            
+                await db.collection("participants").deleteMany({ lastStatus: { $lt: tenSecondsAgo}})
 
-               /*await  db.collection("messages").insertOne({
-                    from: user,
-                    to: "Todos",
-                    text: "sai na sala...",
-                    type: "status",
-                    time: dayjs().format('HH:mm:ss')
-                }) */
-              
-            }
-            catch(err){
-              console.log(err.message)
-            }
-        },10000)
+                await db.collection("participants").findOne({ lastStatus: { $lt: tenSecondsAgo}})
+                .then((user)=>{    
+                    console.log("USER DENTRO DO INTERVAL",user)
+                    if (user !== null){
+                        db.collection("messages").insertOne({
+                            from: user,
+                            to: "Todos",
+                            text: "sai na sala...",
+                            type: "status",
+                            time: dayjs().format('HH:mm:ss')
+                            
+                        }).catch((err)=> console.log(err))
+                    }
+                
+
+                })
+                .catch((err)=>{
+                     console.log(err.message)
+                })
+            }catch(err){}
+
+            
+        },15000)
        
      
 
