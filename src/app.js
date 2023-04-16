@@ -161,28 +161,30 @@ api.post("/messages", async (req, res) => {
     }catch(err){  res.status(500).send(err.message)}
    
 });
-/*
+
 api.post ("/status", async (req, res)=>{
         const user = req.headers.user
-        const d = new Date();
-        let time = d.getTime();
-            console.log ("date now",Date.now(), " now -10 ", Date.now()- 10000, " time " , time )
-        
-        
-        if(!user)
-        return res.status(404).json({error:"erro nao existe usuario ativo"}) 
     
+        const d = new Date();
+          
+        (!user || user===null)
+            return res.status(404)
+        const validateUser= userSchema.validate(user)
+        if(validateUser.error){
+            const errors = validateUser.error.details.map((detail) => detail.message);
+            return res.status(422).send(errors);
+        }
+      
         try{
-            db.collection("participants").update({name:user}, {$set:{lastStatus : Date.now()}})
-            res.status(200)
+           await db.collection("participants").updateOne({name:user}, {$set:{lastStatus : d.getTime()}})
+            res.status(200).send("tempo atualizado")
         }
         catch(err){
             res.status(500).send(err.message)
-        }
-            
+        }         
         
  })
-   */ 
+   
 /**
         setInterval(()=>{
             try{
