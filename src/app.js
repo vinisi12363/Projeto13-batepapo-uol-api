@@ -203,7 +203,7 @@ api.post ("/status", async (req, res)=>{
             console.log("DATE NOW: ", Date.now(), "DEZ SEGUNDOS ATRAS", tenSecondsAgo)
 
             try{
-                await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
+               /* await db.collection("participants").find({ lastStatus: { $lte: tenSecondsAgo}}).toArray()
                 .then((user)=>{    
                     console.log("USER DENTRO DO INTERVAL",user)
                     if (user !== null){
@@ -221,7 +221,7 @@ api.post ("/status", async (req, res)=>{
                 })
                 .catch((err)=>{
                      console.log(err.message)
-                })
+                })*/
 
 
                 await db.collection("participants").deleteMany({ lastStatus: { $lte: tenSecondsAgo}})
