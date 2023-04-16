@@ -272,7 +272,7 @@ api.post ("/status", async (req, res)=>{
 
 
  })
- /*
+  
         setInterval(async () =>{
 
 
@@ -308,7 +308,7 @@ api.post ("/status", async (req, res)=>{
         },15000)
       
      
-*/
+
 
 api.listen(port, () => console.log(`Servidor iniciado na porta ${port}`))
 
