@@ -12,7 +12,7 @@ dotenv.config();
 const nameSchema = joi.object({
     name:joi.string().required().alphanum().min(3).max(30)
 })
-const userSchema = joi.string()
+const userSchema = joi.string().alphanum()
 
 const limitSchema = joi.number()
 
@@ -94,7 +94,7 @@ api.post("/participants",  async (req, res) => {
 
 
 api.get("/messages", async (req, res) => {
-
+    
     const user = req.headers.user;
     console.log('USER',req.headers)
     const limit = parseInt(req.query.limit);
@@ -113,12 +113,12 @@ api.get("/messages", async (req, res) => {
     try {  
                     
 
-       const messages = await db.collection("messages").find({ $or: [{ to: 'Todos'}, { to: user }, { from: user }] }).limit(limit).toArray()
+       const messages = await db.collection("messages").find({ $or: [{ to: 'Todos'}, { to: user }, {from: user}] }).limit(limit).toArray()
       
        if (limit <= 0)
        return res.status(422).json({ error: "campo limit tem que ser maior que zero" })
  
-
+       
        res.send(messages)
 
     }catch(err){
@@ -133,7 +133,7 @@ api.post("/messages", async (req, res) => {
     console.log('req headers: ', req.headers)
     const { to, text, type } = req.body
 
-    if(!user) return res.status(422).json({message:"user invalido"})
+    if(!user || user === null) return res.status(422).json({message:"user invalido"})
 
     const validateBody = messageSchema.validate({to, text, type},{ abortEarly: false })
     if (validateBody.error){
