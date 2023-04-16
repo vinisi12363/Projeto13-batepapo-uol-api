@@ -4,7 +4,6 @@ import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from 'dayjs';
 import joi from 'joi';
-import { stripHtml} from "string-strip-html";
 dayjs.locale('pt-br')
 dotenv.config();
 
